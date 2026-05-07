@@ -10,6 +10,7 @@ struct clientData
     char lastName[15];    // account last name
     char firstName[10];   // account first name
     double balance;       // account balance
+    int pin;              // account PIN
 };                        // end structure clientData
 
 // prototypes
@@ -68,7 +69,7 @@ void textFile(FILE *readPtr)
     FILE *writePtr; // accounts.txt file pointer
     int result;     // used to test whether fread read any bytes
     // create clientData with default information
-    struct clientData client = {0, "", "", 0.0};
+    struct clientData client = {0, "", "", 0.0, 0};
 
     // fopen opens the file; exits if file cannot be opened
     if ((writePtr = fopen("accounts.txt", "w")) == NULL)
@@ -78,7 +79,7 @@ void textFile(FILE *readPtr)
     else
     {
         rewind(readPtr); // sets pointer to beginning of file
-        fprintf(writePtr, "%-6s%-16s%-11s%10s\n", "Acct", "Last Name", "First Name", "Balance");
+        fprintf(writePtr, "%-6s%-16s%-11s%10s%6s\n", "Acct", "Last Name", "First Name", "Balance", "PIN");
 
         // copy all records from random-access file into text file
         while (!feof(readPtr))
@@ -88,8 +89,8 @@ void textFile(FILE *readPtr)
             // write single record to text file
             if (result != 0 && client.acctNum != 0)
             {
-                fprintf(writePtr, "%-6d%-16s%-11s%10.2f\n", client.acctNum, client.lastName, client.firstName,
-                        client.balance);
+                fprintf(writePtr, "%-6d%-16s%-11s%10.2f%6d\n", client.acctNum, client.lastName, client.firstName,
+                        client.balance, client.pin);
             } // end if
         }     // end while
 
@@ -102,8 +103,9 @@ void updateRecord(FILE *fPtr)
 {
     unsigned int account; // account number
     double transaction;   // transaction amount
+    int enteredPin;       // entered PIN
     // create clientData with no information
-    struct clientData client = {0, "", "", 0.0};
+    struct clientData client = {0, "", "", 0.0, 0};
 
     // obtain number of account to update
     printf("%s", "Enter account to update ( 1 - 100 ): ");
@@ -122,6 +124,16 @@ void updateRecord(FILE *fPtr)
     { // update record
         printf("%-6d%-16s%-11s%10.2f\n\n", client.acctNum, client.lastName, client.firstName, client.balance);
 
+        // prompt for PIN
+        printf("%s", "Enter PIN: ");
+        scanf("%d", &enteredPin);
+
+        if (enteredPin != client.pin)
+        {
+            printf("PIN mismatch alert!\n");
+            return;
+        }
+
         // request transaction amount from user
         printf("%s", "Enter charge ( + ) or payment ( - ): ");
         scanf("%lf", &transaction);
@@ -129,9 +141,15 @@ void updateRecord(FILE *fPtr)
 
         printf("%-6d%-16s%-11s%10.2f\n", client.acctNum, client.lastName, client.firstName, client.balance);
 
+        // check for low balance
+        if (client.balance < 100.0)
+        {
+            printf("Low balance alert!\n");
+        }
+
         // move file pointer to correct record in file
         // move back by 1 record length
-        fseek(fPtr, -sizeof(struct clientData), SEEK_CUR);
+        fseek(fPtr, -(long)sizeof(struct clientData), SEEK_CUR);
         // write updated record over old record in file
         fwrite(&client, sizeof(struct clientData), 1, fPtr);
     } // end else
@@ -141,7 +159,7 @@ void updateRecord(FILE *fPtr)
 void deleteRecord(FILE *fPtr)
 {
     struct clientData client;                       // stores record read from file
-    struct clientData blankClient = {0, "", "", 0}; // blank client
+    struct clientData blankClient = {0, "", "", 0, 0}; // blank client
     unsigned int accountNum;                        // account number
 
     // obtain number of account to delete
@@ -170,7 +188,7 @@ void deleteRecord(FILE *fPtr)
 void newRecord(FILE *fPtr)
 {
     // create clientData with default information
-    struct clientData client = {0, "", "", 0.0};
+    struct clientData client = {0, "", "", 0.0, 0};
     unsigned int accountNum; // account number
 
     // obtain number of account to create
@@ -191,6 +209,10 @@ void newRecord(FILE *fPtr)
         // user enters last name, first name and balance
         printf("%s", "Enter lastname, firstname, balance\n? ");
         scanf("%14s%9s%lf", client.lastName, client.firstName, &client.balance);
+
+        // prompt for PIN
+        printf("%s", "Enter PIN: ");
+        scanf("%d", &client.pin);
 
         client.acctNum = accountNum;
         // move file pointer to correct record in file
